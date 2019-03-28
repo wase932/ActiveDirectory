@@ -1,0 +1,11 @@
+C:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\bin\Debug\netcoreapp2.2\ActiveDirectory.deps.json
+C:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\bin\Debug\netcoreapp2.2\ActiveDirectory.runtimeconfig.json
+C:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\bin\Debug\netcoreapp2.2\ActiveDirectory.runtimeconfig.dev.json
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\bin\Debug\netcoreapp2.2\ActiveDirectory.dll
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\bin\Debug\netcoreapp2.2\ActiveDirectory.pdb
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.csprojAssemblyReference.cache
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.csproj.CoreCompileInputs.cache
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.AssemblyInfoInputs.cache
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.AssemblyInfo.cs
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.dll
+c:\Users\D040850\Documents\VS Code\Guardian\ActiveDirectory\obj\Debug\netcoreapp2.2\ActiveDirectory.pdb
