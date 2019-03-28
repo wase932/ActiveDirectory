@@ -1,14 +1,11 @@
-using System.Linq;
 using System;
-using System.DirectoryServices.AccountManagement;
-using System.DirectoryServices;
 
 namespace ActiveDirectory
 {
     class AdUser
     {
         public string department { get; set; }
-        public string badpasswordtime { get; set; }
+        public DateTime badpasswordtime { get; set; }
         public string msexchuserculture { get; set; }
         public string distinguishedname { get; set; }
         public string extensionattribute12 { get; set; }
@@ -26,7 +23,7 @@ namespace ActiveDirectory
         public string showinaddressbook { get; set; }
         public string objectsid { get; set; }
         public string msexchumdtmfmap { get; set; }
-        public string lastlogontimestamp { get; set; }
+        public DateTime lastlogontimestamp { get; set; }
         public string adspath { get; set; }
         public string homedirectory { get; set; }
         public string dscorepropagationdata { get; set; }
@@ -37,10 +34,10 @@ namespace ActiveDirectory
         public string userprincipalname { get; set; }
         public string company { get; set; }
         public string postalcode { get; set; }
-        public string lastlogon { get; set; }
+        public DateTime lastlogon { get; set; }
         public string managedobjects { get; set; }
         public string sidhistory { get; set; }
-        public string pwdlastset { get; set; }
+        public DateTime pwdlastset { get; set; }
         public string countrycode { get; set; }
         public string logoncount { get; set; }
         public string employeenumber { get; set; }
@@ -91,7 +88,7 @@ namespace ActiveDirectory
         public string authorigbl { get; set; }
         public string manager { get; set; }
         public string msexchrecipientdisplaytype { get; set; }
-        public string directreports { get; set; }
+        public int directreports { get; set; }
         public string ipphone { get; set; }
         public string primarygroupid { get; set; }
         public string mailnickname { get; set; }
