@@ -1,9 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
+using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
+using System.Net;
+using System.Reflection;
+using System.Security.Principal;
+using System.Text;
 
 namespace ActiveDirectory
 {
@@ -20,6 +26,96 @@ namespace ActiveDirectory
 
         //     Dts.Variables["User::ADDataTable"].Value = dataTable;
         // }
+
+        public string GetCreateTableDDL(string tableName, DataTable table)
+        {
+            var ddl = new StringBuilder();
+            ddl.AppendLine($"create table [{tableName}] (");
+            foreach (DataColumn col in table.Columns)
+            {
+                ddl.Append($"  [{col.ColumnName}] nvarchar(255), ");
+            }
+            ddl.Length = ddl.Length - ", ".Length;
+            ddl.Append(")");
+
+            return ddl.ToString();
+        }
+
+        public void LoadDatabase(string server, string database, string destinationTableName, DataTable table){
+            
+            // take note of SqlBulkCopyOptions.KeepIdentity , you may or may not want to use this for your situation.
+            SqlConnection _connection = new SqlConnection(@"Data Source=" + server + ";Initial Catalog="+ database +";Integrated Security=SSPI;");  
+
+                using (var bulkCopy = new SqlBulkCopy(_connection.ConnectionString, SqlBulkCopyOptions.KeepIdentity))
+                {
+                    // my DataTable column names match my SQL Column names, so I simply made this loop. However if your column names don't match, just pass in which datatable name matches the SQL column name in Column Mappings
+                    foreach (DataColumn col in table.Columns)
+                    {
+                        bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                    }
+
+                    bulkCopy.BulkCopyTimeout = 600;
+                    bulkCopy.DestinationTableName = destinationTableName;
+                    bulkCopy.WriteToServer(table);
+                }
+            }
+
+        public DataTable GetAllADUserValues(string domain){
+            var allProperties = GetAllADUserProperties(domain);
+
+            //Create Data Table
+            var dataColumns = CreateColumns(allProperties);
+            var table = CreateTable(dataColumns);
+
+            using (var context = new PrincipalContext(ContextType.Domain, domain))
+            {
+                using (var searcher = new PrincipalSearcher(new UserPrincipal(context)))
+                {
+                    var i = 0;
+                    foreach (var result in searcher.FindAll())
+                    {
+                        // if(i == 150)
+                        //     break;
+                        i ++;
+                        Console.WriteLine(i);
+                        var userValues = new List<string>();
+                        DirectoryEntry de = result.GetUnderlyingObject() as DirectoryEntry;
+                        foreach (var p in allProperties)
+                        {
+                            string value = de.Properties[p].Value == null? string.Empty : de.Properties[p].Value.ToString(); 
+                            if(value.Length > 255)
+                                value = string.Empty;
+                            // var value = de.Properties[p].Value?? string.Empty;
+                            userValues.Add( value);
+                            //Console.WriteLine("{0} : {1}", p,value);
+                            //Console.WriteLine("{0} : {1}", p, de.Properties[p].Value);
+                        }
+                        LoadDataTable(table, userValues);
+                    }
+                }
+            }
+            return table;
+        }
+
+        public List<String> GetAllADUserProperties(string domain) //"dcs.azdcs.gov"
+        {
+                List<String> properties = new List<String>();
+                IPAddress[] ips = Dns.GetHostAddresses(domain).Where(w => w.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToArray();
+                if (ips.Length > 0)
+                {
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest);//DirectoryContextType.DirectoryServer, ips[0].ToString() + ":389", Username, Password);
+                    ActiveDirectorySchema adschema = ActiveDirectorySchema.GetSchema(directoryContext);
+                    ActiveDirectorySchemaClass adschemaclass = adschema.FindClass("User");
+
+                    // Read the OptionalProperties & MandatoryProperties
+                    ReadOnlyActiveDirectorySchemaPropertyCollection propcol = adschemaclass.GetAllProperties();
+
+                    foreach (ActiveDirectorySchemaProperty schemaProperty in propcol)
+                        properties.Add(schemaProperty.Name.ToLower());
+                }
+
+                return properties;
+        }
     
     
         public List<ActiveDirectoryUser> GetAccounts(string domainName, string LDAPDomainName)
@@ -49,11 +145,40 @@ namespace ActiveDirectory
                             IsEnabled = u.Enabled, 
                             Manager = GetActiveDirectoryProperty(u.SamAccountName, LDAPDomainName, "manager"),
                             Title = GetActiveDirectoryProperty(u.SamAccountName, LDAPDomainName, "title")
+
                         });
                     }
                 }
             }
             return result;
+        }
+
+        private void LoadDataTable(DataTable table, List<string> data)
+        {
+            var newRow = table.NewRow();
+            for(int i =0; i < table.Columns.Count; i++){
+                newRow[i] = data[i];
+            }
+
+            table.Rows.Add(newRow);
+
+            // table.Rows.Add()
+            // DataTable dt = new DataTable();
+
+            // dt.Columns.Add("Name");
+            // dt.Columns.Add("Price");
+            // dt.Columns.Add("URL");
+
+            // foreach (var item in list)
+            // {
+            //     var row = dt.NewRow();
+
+            //     row["Name"] = item.Name;
+            //     row["Price"] = Convert.ToString(item.Price);
+            //     row["URL"] = item.URL;
+
+            //     dt.Rows.Add(row);
+            // }
         }
 
         private void LoadDataTable(DataTable table, string[] data)
@@ -77,10 +202,19 @@ namespace ActiveDirectory
             }).ToList();
         }
 
+        private List<DataColumn> CreateColumns(List<string> columnNames)
+        {
+            return columnNames.Select(x => new DataColumn
+            {
+                ColumnName = x,
+                AllowDBNull = true
+            }).ToList();
+        }
+
         #region AllProperties
         //This method is an over kill at the moment - but could be very useful in the future.
         //Think about using reflection to resolve the property names so code does not break if AD Administrator changes structure (invalid since code will still break when trying to load up into database...)
-        public void GetDirectoryEntry(string adUserName, string domainName) //"LDAP://dcs.azdcs.gov"
+        public AdUser GetDirectoryEntry(string adUserName, string domainName) //"LDAP://dcs.azdcs.gov"
         {
             DirectoryEntry de = new DirectoryEntry(domainName);
 
@@ -89,102 +223,56 @@ namespace ActiveDirectory
             ds.SearchScope = SearchScope.Subtree;
 
             SearchResult rs = ds.FindOne();
-            
-            //get all properties:
-            //TODO: try cast before retrieving value.
-            for (int i = 0; i < rs.Properties.Count; i++)
+
+            //lets try some reflection:
+            var user = new AdUser();
+            foreach (var p in rs.Properties)
             {
-                var user = new AdUser{
-                      department =   rs.Properties["department"][0].ToString()
-                    , badpasswordtime =  new DateTime(Int64.Parse(rs.Properties["badpasswordtime"][0].ToString()))
-                    , msexchuserculture =   rs.Properties["msexchuserculture"][0].ToString()
-                    , distinguishedname =   rs.Properties["distinguishedname"][0].ToString()
-                    , extensionattribute12 =   rs.Properties["extensionattribute12"][0].ToString()
-                    , samaccounttype =   rs.Properties["samaccounttype"][0].ToString()
-                    , msexchelcmailboxflags =   rs.Properties["msexchelcmailboxflags"][0].ToString()
-                    , cn =   rs.Properties["cn"][0].ToString()
-                    , msexchpoliciesincluded =   rs.Properties["msexchpoliciesincluded"][0] .ToString()
-                    , proxyaddresses =   rs.Properties["proxyaddresses"][0].ToString()
-                    , msexcharchivename =   rs.Properties["msexcharchivename"][0].ToString()
-                    , extensionattribute11 =   rs.Properties["extensionattribute11"][0].ToString()
-                    , otherpager =   rs.Properties["otherpager"][0].ToString()
-                    , employeeid =   rs.Properties["employeeid"][0].ToString()
-                    , homedrive =   rs.Properties["homedrive"][0].ToString()
-                    , initials =   rs.Properties["initials"][0].ToString()
-                    , showinaddressbook =   rs.Properties["showinaddressbook"][0].ToString()
-                    , objectsid =   rs.Properties["objectsid"][0].ToString()
-                    , msexchumdtmfmap =   rs.Properties["msexchumdtmfmap"][0].ToString()
-                    , lastlogontimestamp =  new DateTime(Int64.Parse(rs.Properties["lastlogontimestamp"][0].ToString()))
-                    , adspath =   rs.Properties["adspath"][0].ToString()
-                    , homedirectory =   rs.Properties["homedirectory"][0].ToString()
-                    , dscorepropagationdata =   rs.Properties["dscorepropagationdata"][0].ToString()
-                    , whenchanged =   rs.Properties["whenchanged"][0].ToString()
-                    , l =   rs.Properties["l"][0].ToString()
-                    , msexcharchiveguid =   rs.Properties["msexcharchiveguid"][0].ToString()
-                    , lastlogoff =   rs.Properties["lastlogoff"][0].ToString()
-                    , userprincipalname =   rs.Properties["userprincipalname"][0].ToString()
-                    , company =   rs.Properties["company"][0].ToString()
-                    , postalcode =   rs.Properties["postalcode"][0].ToString()
-                    , lastlogon =   new DateTime(Int64.Parse(rs.Properties["lastlogon"][0].ToString()))
-                    , managedobjects =   rs.Properties["managedobjects"][0].ToString()
-                    , sidhistory =   rs.Properties["sidhistory"][0].ToString()
-                    , pwdlastset =   new DateTime(Int64.Parse(rs.Properties["pwdlastset"][0].ToString()))
-                    , countrycode =   rs.Properties["countrycode"][0].ToString()
-                    , logoncount =   rs.Properties["logoncount"][0].ToString()
-                    , employeenumber =   rs.Properties["employeenumber"][0].ToString()
-                    , badpwdcount =   rs.Properties["badpwdcount"][0].ToString()
-                    , mobile =   rs.Properties["mobile"][0].ToString()
-                    , memberof =   rs.Properties["memberof"][0].ToString()
-                    , description =   rs.Properties["description"][0].ToString()
-                    , displayname =   rs.Properties["displayname"][0].ToString()
-                    , msexchsafesendershash =   rs.Properties["msexchsafesendershash"][0].ToString()
-                    , msexchrecipienttypedetails =   rs.Properties["msexchrecipienttypedetails"][0].ToString()
-                    , extensionattribute4 =   rs.Properties["extensionattribute4"][0].ToString()
-                    , c =   rs.Properties["c"][0].ToString()
-                    , accountnamehistory =   rs.Properties["accountnamehistory"][0].ToString()
-                    , usncreated =   rs.Properties["usncreated"][0].ToString()
-                    , msexchversion =   rs.Properties["msexchversion"][0].ToString()
-                    , objectclass =   rs.Properties["objectclass"][0].ToString()
-                    , legacyexchangedn =   rs.Properties["legacyexchangedn"][0].ToString()
-                    , sn =   rs.Properties["sn"][0].ToString()
-                    , msexchhidefromaddresslists =   rs.Properties["msexchhidefromaddresslists"][0].ToString()
-                    , mail =   rs.Properties["mail"][0].ToString()
-                    , accountexpires =   rs.Properties["accountexpires"][0].ToString()
-                    , usnchanged =   rs.Properties["usnchanged"][0].ToString()
-                    , extensionattribute3 =   rs.Properties["extensionattribute3"][0].ToString()
-                    , name =   rs.Properties["name"][0].ToString()
-                    , employeetype =   rs.Properties["employeetype"][0].ToString()
-                    , samaccountname =   rs.Properties["samaccountname"][0].ToString()
-                    , givenname =   rs.Properties["givenname"][0].ToString()
-                    , targetaddress =   rs.Properties["targetaddress"][0].ToString()
-                    , objectguid =   rs.Properties["objectguid"][0].ToString()
-                    , telephonenumber =   rs.Properties["telephonenumber"][0].ToString()
-                    , streetaddress =   rs.Properties["streetaddress"][0].ToString()
-                    , codepage =   rs.Properties["codepage"][0].ToString()
-                    , msexchblockedsendershash =   rs.Properties["msexchblockedsendershash"][0].ToString()
-                    , logonhours =   rs.Properties["logonhours"][0].ToString()
-                    , msexchremoterecipienttype =   rs.Properties["msexchremoterecipienttype"][0].ToString()
-                    , userparameters =   rs.Properties["userparameters"][0].ToString()
-                    , thumbnailphoto =   rs.Properties["thumbnailphoto"][0].ToString()
-                    , useraccountcontrol =   rs.Properties["useraccountcontrol"][0].ToString()
-                    , st =   rs.Properties["st"][0].ToString()
-                    , title =   rs.Properties["title"][0].ToString()
-                    , physicaldeliveryofficename =   rs.Properties["physicaldeliveryofficename"][0].ToString()
-                    , msexchmailboxguid =   rs.Properties["msexchmailboxguid"][0].ToString()
-                    , co =   rs.Properties["co"][0].ToString()
-                    , extensionattribute9 =   rs.Properties["extensionattribute9"][0].ToString()
-                    , whencreated =   rs.Properties["whencreated"][0].ToString()
-                    , instancetype =   rs.Properties["instancetype"][0].ToString()
-                    , objectcategory =   rs.Properties["objectcategory"][0].ToString()
-                    , authorigbl =   rs.Properties["authorigbl"][0].ToString()
-                    , manager =   rs.Properties["manager"][0].ToString()
-                    , msexchrecipientdisplaytype =   rs.Properties["msexchrecipientdisplaytype"][0].ToString()
-                    , directreports =   rs.Properties["directreports"].Count //counting this for now...
-                    , ipphone =   rs.Properties["ipphone"][0].ToString()
-                    , primarygroupid =   rs.Properties["primarygroupid"][0].ToString()
-                    , mailnickname =   rs.Properties["mailnickname"][0].ToString()
-                    };
+                dynamic item = p;
+                string key = item.Key;
+                var value = item.Value[0];
+                
+                var prop = user.GetType().GetRuntimeProperties().Single(i => i.Name == key);
+                if(null != prop && prop.CanWrite)
+                {
+                    prop.SetValue(user, value, null);
+                }
             }
+            ds.Dispose();
+            de.Dispose();
+            return user;
+        }
+
+        public List<AdUser> GetAllActiveDirectoryAccounts(string domainName)//"LDAP://dcs.azdcs.gov"
+        {
+            DirectoryEntry de = new DirectoryEntry(domainName);
+
+            DirectorySearcher ds = new DirectorySearcher(de);
+            ds.Filter = "(&((&(objectCategory=Person)(objectClass=User)))(samaccountname=*))";
+            ds.SearchScope = SearchScope.Subtree;
+
+            SearchResult rs = ds.FindOne();
+            var result = new List<AdUser>();
+
+            //lets try some reflection:
+            foreach (var p in rs.Properties)
+            {
+                var user = new AdUser();
+                dynamic item = p;
+                string key = item.Key;
+                var value = item.Value[0];
+                
+                var prop = user.GetType().GetRuntimeProperties().SingleOrDefault(i => i.Name == key);
+                if(null != prop && prop.CanWrite)
+                {
+                    prop.SetValue(user, value, null);
+                }
+
+                result.Add(user);
+            }
+            ds.Dispose();
+            de.Dispose();
+            return result;
         }
 
         #endregion AllProperties
@@ -220,7 +308,6 @@ namespace ActiveDirectory
         }
 
         #endregion TempHelper Methods
-
 
     }
 }

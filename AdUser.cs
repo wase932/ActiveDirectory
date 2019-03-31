@@ -1,8 +1,119 @@
+using System.Reflection;
 using System;
+using System.Linq;
 
 namespace ActiveDirectory
 {
-    class AdUser
+    public class AdUser 
+    {
+        string authorigbl { get; set; }
+        long badpasswordtime { get; set; }
+        string title { get; set; }
+        string physicaldeliveryofficename { get; set; }
+        long accountexpires { get; set; }
+        string legacyexchangedn { get; set; }
+        byte[] msexchmailboxguid { get; set; }
+        string proxyaddresses { get; set; }
+        long lastlogontimestamp { get; set; }
+        string l { get; set; }
+        DateTime dscorepropagationdata { get; set; }
+        int samaccounttype { get; set; }
+        int primarygroupid { get; set; }
+        int useraccountcontrol { get; set; }
+        string extensionattribute4 { get; set; }
+        string msexcharchivename { get; set; }
+        string extensionattribute3 { get; set; }
+        string memberof { get; set; }
+        string msexchpoliciesincluded { get; set; }
+        long msexchrecipienttypedetails { get; set; }
+        string c { get; set; }
+        string cn { get; set; }
+        string directreports { get; set; }
+        long msexchversion { get; set; }
+        string employeenumber { get; set; }
+        int countrycode { get; set; }
+        int codepage { get; set; }
+        string description { get; set; }
+        byte[] objectsid { get; set; }
+        long pwdlastset { get; set; }
+        int msexchrecipientdisplaytype { get; set; }
+        int badpwdcount { get; set; }
+        string homedrive { get; set; }
+        string co { get; set; }
+        DateTime whenchanged { get; set; }
+        string msexchumdtmfmap { get; set; }
+        string extensionattribute11 { get; set; }
+        long usnchanged { get; set; }
+        string manager { get; set; }
+        string homedirectory { get; set; }
+        string mail { get; set; }
+        string msexchuserculture { get; set; }
+        string accountnamehistory { get; set; }
+        byte[] thumbnailphoto { get; set; }
+        byte[] objectguid { get; set; }
+        string givenname { get; set; }
+        string adspath { get; set; }
+        string distinguishedname { get; set; }
+        string extensionattribute9 { get; set; }
+        string displayname { get; set; }
+        long lastlogoff { get; set; }
+        string employeeid { get; set; }
+        long lastlogon { get; set; }
+        string postalcode { get; set; }
+        string company { get; set; }
+        string targetaddress { get; set; }
+        string userparameters { get; set; }
+        string st { get; set; }
+        string ipphone { get; set; }
+        string extensionattribute12 { get; set; }
+        string initials { get; set; }
+        string employeetype { get; set; }
+        byte[] logonhours { get; set; }
+        string otherpager { get; set; }
+        string telephonenumber { get; set; }
+        long msexchremoterecipienttype { get; set; }
+        byte[] msexchsafesendershash { get; set; }
+        string mailnickname { get; set; }
+        string streetaddress { get; set; }
+        string department { get; set; }
+        byte[] sidhistory { get; set; }
+        int logoncount { get; set; }
+        string sn { get; set; }
+        string objectcategory { get; set; }
+        string userprincipalname { get; set; }
+        string mobile { get; set; }
+        DateTime whencreated { get; set; }
+        string showinaddressbook { get; set; }
+        byte[] msexcharchiveguid { get; set; }
+        byte[] msexchblockedsendershash { get; set; }
+        string samaccountname { get; set; }
+        string name { get; set; }
+        bool msexchhidefromaddresslists { get; set; }
+        string managedobjects { get; set; }
+        int msexchelcmailboxflags { get; set; }
+        string objectclass { get; set; }
+        long usncreated { get; set; }
+        int instancetype { get; set; }
+
+        public object GetPropertyValue(string propertyName)
+        {
+            return this.GetType().GetProperties()
+                .Single(pi => pi.Name == propertyName)
+                .GetValue(this, null);
+        }
+
+        // public void SetPropertyValue(string propertyName, object value)
+        // {
+        //     //var properties = this.GetType().GetProperties();
+        //     //var properties = this.GetType().GetRuntimeProperties();
+            
+        //     this.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance).SetValue(this, value, null);
+        // }
+    }
+    
+    
+    /* 
+    public class AdUser
     {
         public string department { get; set; }
         public DateTime badpasswordtime { get; set; }
@@ -94,4 +205,5 @@ namespace ActiveDirectory
         public string mailnickname { get; set; }
 
     }
+    */
 }

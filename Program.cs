@@ -14,13 +14,17 @@ namespace ActiveDirectory
             var ldapDomainName = "LDAP://dcs.azdcs.gov";
             //GetActiveDirectoryAccount("dcs.azdcs.gov");
             var activeDirectoryMethods = new ActiveDirectoryMethods();
-            //activeDirectoryMethods.GetDirectoryEntry("D040850", ldapDomainName);
-            var allADUsers  = activeDirectoryMethods.GetAccounts(domainName, ldapDomainName);
-
+            // var aduser = activeDirectoryMethods.GetDirectoryEntry("D046113", ldapDomainName);
+            // var allUsers = activeDirectoryMethods.GetAllActiveDirectoryAccounts(ldapDomainName);
+            //var allADUsers  = activeDirectoryMethods.GetAccounts(domainName, ldapDomainName);
+            //activeDirectoryMethods.GetAllADUserProperties("dcs.azdcs.gov");
+            var dataTable = activeDirectoryMethods.GetAllADUserValues(domainName);
+            //var createTableDDL = activeDirectoryMethods.GetCreateTableDDL("bulkActiveDirectoryAccounts", dataTable);
+            activeDirectoryMethods.LoadDatabase(@"GuardianMig01P\DeIdentified", "Staging_Exchanges", "bulkActiveDirectoryAccounts", dataTable);
 
             //For testing...
-            var titleFormat = string.Format("{0}~{1}~{2}~{3}~{4}~{5}~{6}~{7}~{8}~{9}~{10}~{11}~{12}~{13}~{14}", "GuidId", "DistinguishedName", "SAMAccountName", "DisplayName", "EmployeeId", "FirstName", "LastName", "EmailAddress", "Telephone", "AccountDescription", "LastLogon", "IsAccountLockedOut", "IsEnabled", "Manager", "Title");
-            Console.WriteLine(titleFormat);
+            //var titleFormat = string.Format("{0}~{1}~{2}~{3}~{4}~{5}~{6}~{7}~{8}~{9}~{10}~{11}~{12}~{13}~{14}", "GuidId", "DistinguishedName", "SAMAccountName", "DisplayName", "EmployeeId", "FirstName", "LastName", "EmailAddress", "Telephone", "AccountDescription", "LastLogon", "IsAccountLockedOut", "IsEnabled", "Manager", "Title");
+            //Console.WriteLine(titleFormat);
 
             // foreach (var i in allADUsers)
             // {
